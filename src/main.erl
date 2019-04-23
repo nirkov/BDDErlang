@@ -14,15 +14,23 @@
 
 -export([exp_to_bdd/2, testing/0]).
 
+%% --------------------------------------------------------------------------------------------------
+%%                             ****          Records         ****
+%% --------------------------------------------------------------------------------------------------
+
 -record(node, {symbol, leftSon, rightSon, height}).
 -record(tree, {variable_permutation, root}).
-
 
 new_node(FatherSymbol, LeftSon, RightSon, Height)->
   #node{symbol = FatherSymbol,leftSon = LeftSon, rightSon = RightSon, height = Height}.
 
 new_tree(Variable_permutation, Construction)->
   #tree{variable_permutation = Variable_permutation, root = Construction}.
+
+
+%% --------------------------------------------------------------------------------------------------
+%%                          ****      The Project Functions       ****
+%% --------------------------------------------------------------------------------------------------
 
 exp_to_bdd(BoolFunc, Order)->
 
@@ -53,16 +61,18 @@ solve_bdd(BDDTree, VariableList)->
 
 solve_bdd_bool(Root, VarMap)->
   NodeVal = maps:get(Root#node.symbol ,VarMap),
-  if
-    (NodeVal =:= false) or (NodeVal =:= 0) -> if
-                                          (Root#node.leftSon =:= true) or (Root#node.leftSon =:= false) -> Root#node.leftSon;
-                                           true -> solve_bdd_bool(Root#node.leftSon, VarMap)
-                                          end;
 
-    true -> if
-              (Root#node.rightSon =:= true) or (Root#node.rightSon =:= false) -> Root#node.rightSon;
-             true -> solve_bdd_bool(Root#node.rightSon, VarMap)
-           end
+  if
+    (NodeVal =:= false) or (NodeVal =:= 0) -> % if the root variable value is false we check his left child
+       if
+         (Root#node.leftSon =:= true) or (Root#node.leftSon =:= false) -> Root#node.leftSon; % if his child result we return it
+         true -> solve_bdd_bool(Root#node.leftSon, VarMap)                                   % else we down to the sub tree rooted in this child
+       end;
+    true ->
+       if    % if the root variable value is true we check his right child
+         (Root#node.rightSon =:= true) or (Root#node.rightSon =:= false) -> Root#node.rightSon;  % if his child result we return it
+         true -> solve_bdd_bool(Root#node.rightSon, VarMap)                                      % else we down to the sub tree rooted in this child
+       end
   end.
 
 
@@ -153,6 +163,7 @@ parsing_from_Parenthesis(A)-> [A].
 
 % Make all permutations.
 permutationSets([]) -> [[]];
+% for any H, we take the all permutation of T, Recursively.
 permutationSets(List)  -> [[H|T] || H <- List, T <- permutationSets(List--[H])].
 
 % Delete duplicate in list.
@@ -165,11 +176,11 @@ deletDuplicate([H|T]) -> [H | [X || X <-deletDuplicate(T), X =/= H]].
 
 % Build a tree recursively and merge between identically nodes in same high.
 binaryTree([H], BoolFunc)->
-  R = calculateBooleanFunction(replace(BoolFunc, H, true)) ,
-  L = calculateBooleanFunction(replace(BoolFunc, H, false)),
+  R = calculateBooleanFunction(replace(BoolFunc, H, true)) , % stop condition - this is leafs so we already replace all
+  L = calculateBooleanFunction(replace(BoolFunc, H, false)), %                  the variable with value and need to calculate the function.
   if
-    R=/=L -> new_node(H, L, R, 1);
-    true -> L
+    R=/=L -> new_node(H, L, R, 1);  % if the left result not equal to the right, we need new node and take both cases into account
+    true -> L                       % Rule 1 : both cases equals - we eliminate the node so we merge the cases.
   end;
 
 binaryTree([H|T], BoolFunc)->
@@ -177,9 +188,16 @@ binaryTree([H|T], BoolFunc)->
   L = binaryTree(T, replace(BoolFunc, H, false)),
   if
     R=/=L -> if
+               % R not a node so the height of the root to this sub tree  = L.height + 1
                (is_record(L, node) and (not is_record(R, node))) -> new_node(H, L, R, L#node.height + 1);
+
+                % L not a node so the height of the root to this sub tree  = R.height + 1
                (is_record(R, node) and (not is_record(L, node))) -> new_node(H, L, R, R#node.height + 1);
+
+               % Both R and L nodes so the height of thiere father  =  Max{R.height, L.height} + 1
                (is_record(L, node) and  is_record(R, node))      -> new_node(H, L, R, max([L#node.height, R#node.height]) + 1);
+
+               % Both are boolean answer of the BoolFunc
                true -> new_node(H, L, R, 1)
              end;
     true ->  L
@@ -191,6 +209,7 @@ binaryTree([H|T], BoolFunc)->
 
 
 % Calculate boolean function
+% All the variable already replace to True or Flase value so we can calculate the logical answer of this assignment
 calculateBooleanFunction(BoolFunc)->
   case BoolFunc of
     {'not', X}     -> not calculateBooleanFunction(X);
@@ -205,6 +224,7 @@ calculateBooleanFunction(BoolFunc)->
 
 
 % Replace variable with value (true or false)
+% assignment of given value to the given variable and build the boolean function with the assignment
 replace({'not', X}, Variable, Value)->
   if
     X =:= Variable -> not Value;
