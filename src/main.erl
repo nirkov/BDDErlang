@@ -12,13 +12,13 @@
 %% API
 -import(lists,[max/1]).
 
--export([exp_to_bdd/2, testing/0]).
+-export([exp_to_bdd/2, solve_bdd/2, test/0]).
 
 %% --------------------------------------------------------------------------------------------------
 %%                             ****          Records         ****
 %% --------------------------------------------------------------------------------------------------
 
--record(node, {symbol, leftSon, rightSon, height}).
+-record(node, {symbol, height, leftSon, rightSon}).
 -record(tree, {variable_permutation, root}).
 
 new_node(FatherSymbol, LeftSon, RightSon, Height)->
@@ -47,13 +47,12 @@ exp_to_bdd(BoolFunc, Order)->
 
   BinaryTrees = [new_tree(Permutation, binaryTree(Permutation, BoolFunc)) || Permutation <- BinaryVariablePermutation],
 
-  case Order of
+   case Order of
     tree_height  ->  min_tree_height(BinaryTrees);
     num_of_nodes ->  min_num_of_nodes(BinaryTrees);
     num_of_leafs ->  min_num_of_leafs(BinaryTrees);
     _ -> BinaryTrees
   end.
-
 
 
 solve_bdd(BDDTree, VariableList)->
@@ -100,61 +99,7 @@ solve_for_all_possible(Tree)->
 
 
 
-testing()->
-%%  Test solve booleam function
-%%  X1 = solve_bdd({tree,[x1,x3,x4,x2],{node,x1,true,{node,x3,{node,x4,true,{node,x2,true,false}},true}}},[{x2, true},{x3, 0},{x1, true},{x4, true}]),
-%%  print("number of nodes : ", X1),
-%%  X2 = solve_bdd({tree,[x1,x3,x4,x2],{node,x1,true,{node,x3,{node,x4,true,{node,x2,true,false}},true}}},[{x2, true},{x3, true},{x1, false},{x4, false}]),
-%%  print("number of nodes : ", X2),
-%%  X3 = solve_bdd({tree,[x1,x3,x4,x2],{node,x1,true,{node,x3,{node,x4,true,{node,x2,true,false}},true}}},[{x2, false},{x3, false},{x1, true},{x4, true}]),
-%%  print("number of nodes : ", X3),
-%%
-%%  Test calc number of nodes
-%%  NumNode1 = num_of_node({node,x4,
-%%                         {node,x1,
-%%      {node,x3,{node,x2,false,true,1},false,2},
-%%      {node,x3,{node,x2,false,true,1},true,2},
-%%      3},
-%%    true,4}),
-%%
-%%  print("number of nodes : ", NumNode1),
-%%
-%%  NumNode2 = num_of_node({node,x3,
-%%    {node,x4,{node,x2,false,true,1},true,2},
-%%    {node,x1,{node,x4,false,true,1},true,2},
-%%    3}),
-%%
-%%  print("number of nodes : ", NumNode2).
-%%
-%%  Test calc number of leaf
-%%  NumLeafe1 = num_of_leafs({node,x4,
-%%                         {node,x1,
-%%      {node,x3,{node,x2,false,true,1},false,2},
-%%      {node,x3,{node,x2,false,true,1},true,2},
-%%      3},
-%%    true,4}),
-%%
-%%  print("number of leaf : ", NumLeafe1),
-%%
-%%  NumLeafe2 = num_of_leafs({node,x4,true,
-%%  {node,x3,{node,x1,true,{node,x2,true,false,1},2},true,3},
-%%  4}),
-%%
-%%  print("number of leaf : ", NumLeafe2),
-%%
-%%  NumLeafe3 = num_of_leafs({node,x4,true,
-%%  {node,x3,{node,x1,true,{node,x2,true,false,1},2},true,3},
-%%  4}),
-%%
-%%  print("number of leaf : ", NumLeafe3),
-%%
-%%  NumLeafe4 = num_of_leafs({node,x1,true,
-%%  {node,x2,true,{node,x4,true,{node,x3,false,true,1},2},3},
-%%  4}),
-%%
-%%  print("number of leaf : ", NumLeafe4).
-%%  {'or',{ {'or',{ {'and',{ x2 , {'not', x3} }} , {'and',{ x1 , x3 }} }} , x4 }}
-
+test()->
 
   Part_A = {'and',{ {'and',{x1,x3}}, {'not',x2}}},
   Part_B = {'not',{'and',{ x1, x4 } } },
@@ -163,10 +108,11 @@ testing()->
 
   % Test ORDER : tree_height
 
-  StartTime_tree_height = now(),
+  StartTime_tree_height = os:system_time(nanosecond ),
   Tree_tree_height = exp_to_bdd(F_x1_x2_x3_x4, tree_height),
-  EndTime_tree_height = now(),
-  print("ORDER : tree_height. Time take to create BBD : ", timer:now_diff(EndTime_tree_height, StartTime_tree_height) / 1000),
+  EndTime_tree_height = os:system_time(nanosecond ),
+  io:fwrite("ORDER : tree_height. Time take to create BBD : ~p ~n", [(EndTime_tree_height - StartTime_tree_height)]),
+
   StartTimeSolve_tree_height = now(),
   AllPossibleResult_tree_height = solve_for_all_possible(Tree_tree_height),
   EndTimeSolve_tree_height = now(),
@@ -180,7 +126,7 @@ testing()->
   StartTime_num_of_nodes = now(),
   Tree_num_of_nodes = exp_to_bdd(F_x1_x2_x3_x4, num_of_nodes),
   EndTime_num_of_nodes = now(),
-  print("ORDER : num_of_nodes. Time take to create BBD",timer:now_diff(EndTime_num_of_nodes, StartTime_num_of_nodes) / 1000),
+  print("ORDER : num_of_nodes. Time take to create BBD : ",timer:now_diff(EndTime_num_of_nodes, StartTime_num_of_nodes) / 1000),
 
   StartTimeSolve_num_of_nodes = now(),
   AllPossibleResult_num_of_nodes = solve_for_all_possible(Tree_num_of_nodes),
@@ -195,7 +141,7 @@ testing()->
   StartTime_num_of_leafs = now(),
   Tree_num_of_leafs = exp_to_bdd(F_x1_x2_x3_x4, num_of_leafs),
   EndTime_num_of_leafs = now(),
-  print("ORDER : num_of_leafs. Time take to create BBD", timer:now_diff(EndTime_num_of_leafs, StartTime_num_of_leafs) / 1000),
+  print("ORDER : num_of_leafs. Time take to create BBD : ", timer:now_diff(EndTime_num_of_leafs, StartTime_num_of_leafs) / 1000),
 
   StartTimeSolve_num_of_leafs = now(),
   AllPossibleResult_num_of_leafs = solve_for_all_possible(Tree_num_of_leafs),
@@ -218,6 +164,8 @@ testing()->
 
 % print function
 print(Msg, Object)-> io:fwrite(Msg ++ "~p~n", [Object]).
+
+printTime(Msg, Object)-> io:fwrite(Msg ++ "~w~n", [Object]).
 
 % Take all variable.
 parsing_from_Parenthesis({'not', A}) -> parsing_from_Parenthesis(A);
