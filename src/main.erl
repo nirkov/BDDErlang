@@ -12,7 +12,7 @@
 %% API
 -import(lists,[max/1]).
 
--export([exp_to_bdd/2, solve_bdd/2, test/0]).
+-export([exp_to_bdd/2, solve_bdd/2]).
 
 %% --------------------------------------------------------------------------------------------------
 %%                             ****          Records         ****
@@ -32,7 +32,7 @@ new_tree(Variable_permutation, Construction)->
 %%                          ****      The Project Functions       ****
 %% --------------------------------------------------------------------------------------------------
 
-exp_to_bdd(BoolFunc, Order)->
+exp_to_bdd(BoolFunc, Ordering)->
 
   % take all variable from the function.
   Variables = parsing_from_Parenthesis(BoolFunc),
@@ -47,7 +47,7 @@ exp_to_bdd(BoolFunc, Order)->
 
   BinaryTrees = [new_tree(Permutation, binaryTree(Permutation, BoolFunc)) || Permutation <- BinaryVariablePermutation],
 
-   case Order of
+   case Ordering of
     tree_height  ->  min_tree_height(BinaryTrees);
     num_of_nodes ->  min_num_of_nodes(BinaryTrees);
     num_of_leafs ->  min_num_of_leafs(BinaryTrees);
@@ -106,20 +106,23 @@ test()->
   Part_C = {'not',  {'and',{ {'and',{x1, {'not',x3} }}, {'or',{x2, {'not',x4} }}}}},
   F_x1_x2_x3_x4 = {'or', {Part_C, {'or', {Part_A, Part_B}}}},
 
+  io:fwrite("~n"),
+  io:fwrite("~n"),
+  
   % Test ORDER : tree_height
 
-  StartTime_tree_height = os:system_time(nanosecond ),
+  StartTime_tree_height = now(),
   Tree_tree_height = exp_to_bdd(F_x1_x2_x3_x4, tree_height),
-  EndTime_tree_height = os:system_time(nanosecond ),
-  io:fwrite("ORDER : tree_height. Time take to create BBD : ~p ~n", [(EndTime_tree_height - StartTime_tree_height)]),
+  EndTime_tree_height = now(),
+  print("ORDER : tree_height. Time take to create BBD : ", timer:now_diff(EndTime_tree_height , StartTime_tree_height) / 1000),
 
   StartTimeSolve_tree_height = now(),
   AllPossibleResult_tree_height = solve_for_all_possible(Tree_tree_height),
   EndTimeSolve_tree_height = now(),
   print("ORDER : tree_height. Solve time of all possible assigment : ", timer:now_diff(EndTimeSolve_tree_height, StartTimeSolve_tree_height) / 1000),
   print("", AllPossibleResult_tree_height),
-  print("~n",""),
-  print("~n",""),
+  io:fwrite("~n"),
+  io:fwrite("~n"),
 
   % Test ORDER : num_of_nodes
 
@@ -133,8 +136,8 @@ test()->
   EndTimeSolve_num_of_nodes = now(),
   print("ORDER : num_of_nodes. Solve time of all possible assigment : ", timer:now_diff(EndTimeSolve_num_of_nodes, StartTimeSolve_num_of_nodes) / 1000),
   print("", AllPossibleResult_num_of_nodes),
-  print("~n",""),
-  print("~n",""),
+  io:fwrite("~n"),
+  io:fwrite("~n"),
 
 % Test ORDER : num_of_leafs
 
